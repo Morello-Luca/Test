@@ -13,6 +13,31 @@ RustAI is a modular, native Rust desktop application designed for interacting wi
 
 ---
 
+## How to Work with AI Coding Agents (e.g., Jules)
+
+This repository is designed so that you can prompt an AI coding agent (like Jules) in new, independent sessions without pasting long project specifications into the chat.
+
+### 1. Initializing a Session
+When starting a new session with an AI agent, you can simply point the agent to `AGENTS.md` at the root of the repository.
+
+**Example Prompt to Start a Session:**
+> *"Please read `AGENTS.md`, reconstruct the current project state from the repository documentation, inspect `docs/TASKS.md` and `docs/NEXT_STEPS.md`, and begin work on the next ready task. Follow all documented protocols and verify your changes before finishing."*
+
+### 2. Directing Specific Tasks
+To have an agent work on a specific task:
+1. Reference the task ID from [`docs/TASKS.md`](./docs/TASKS.md) (e.g., `TASK-002`).
+2. Point the agent to its specification in `docs/tasks/` (e.g., `docs/tasks/TASK-002-desktop-shell.md`).
+
+**Example Task Prompt:**
+> *"Please execute `TASK-002` as specified in `docs/tasks/TASK-002-desktop-shell.md`. Read `AGENTS.md` first to ensure compliance with session protocols and architectural constraints."*
+
+### 3. Creating New Tasks or Proposing Architectural Changes
+If you have a new feature request:
+- Ask the agent to create a task specification in `docs/tasks/TASK-XXX-<name>.md` and register it in `docs/TASKS.md`.
+- For significant architectural changes, ask the agent to create a new ADR proposal in `docs/decisions/` using `docs/templates/ADR_TEMPLATE.md`.
+
+---
+
 ## Quick Start & Verification
 
 ### Prerequisites
@@ -39,7 +64,7 @@ python3 scripts/validate_docs.py
 
 ---
 
-## Documentation Entry Point
+## Documentation Navigation
 
 For AI agents and human contributors, start by reading [`AGENTS.md`](./AGENTS.md) and [`docs/README.md`](./docs/README.md).
 

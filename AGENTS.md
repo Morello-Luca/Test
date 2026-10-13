@@ -16,7 +16,16 @@ Before modifying any files or planning code changes, you **MUST** complete the f
 
 ---
 
-## 2. CORE NON-NEGOTIABLE DIRECTIVES
+## 2. USER PROMPTING PATTERN FOR AGENTS
+
+Users will typically interact with you by providing a simple instruction pointing to this repository, such as:
+> *"Read `AGENTS.md`, inspect `docs/TASKS.md` and `docs/NEXT_STEPS.md`, and execute the next ready task."*
+
+You must always rely on the repository's documentation and files for context rather than asking the user to re-paste project specifications.
+
+---
+
+## 3. CORE NON-NEGOTIABLE DIRECTIVES
 
 * **Verified State vs Planned State**:
   * Never claim a feature is complete or verified unless builds (`cargo build`), tests (`cargo test`), linter (`cargo clippy`), formatter (`cargo fmt --check`), and doc validation (`python3 scripts/validate_docs.py`) have actually been executed and succeeded.
@@ -33,7 +42,7 @@ Before modifying any files or planning code changes, you **MUST** complete the f
 
 ---
 
-## 3. MANDATORY SESSION-END PROTOCOL
+## 4. MANDATORY SESSION-END PROTOCOL
 
 At the conclusion of your task, you **MUST**:
 
@@ -54,7 +63,7 @@ At the conclusion of your task, you **MUST**:
 
 ---
 
-## 4. DOCUMENTATION INDEX & NAVIGATION
+## 5. DOCUMENTATION INDEX & NAVIGATION
 
 * **Product Vision & Goals**: `docs/PROJECT_VISION.md`
 * **Requirements Registry**: `docs/REQUIREMENTS.md`
