@@ -2,16 +2,18 @@
 
 - **Session Date**: 2026-03-05
 - **Task ID**: TASK-002
-- **Objective**: Implement Phase 1 Desktop Application Shell Scaffolding and Settings Configuration Persistence
+- **Objective**: Implement Phase 1 egui Native Desktop Application Shell Scaffolding and Settings Configuration Persistence
 
 ## Changes Made
-- Created `crates/rust-ai-app/src/config.rs` with `AppConfig` and `ThemeMode` enums for JSON settings load/save.
-- Added `tempfile` dev-dependency and unit tests for `AppConfig`.
-- Updated `crates/rust-ai-app/src/main.rs` and `crates/rust-ai-app/src/lib.rs` to expose and verify status and configuration.
-- Updated repository state tracking in `docs/CURRENT_STATE.md`, `docs/NEXT_STEPS.md`, `docs/TASKS.md`, and `docs/tasks/TASK-002-desktop-shell.md`.
+- Integrated `egui` and `eframe` GUI dependencies in `crates/rust-ai-app/Cargo.toml`.
+- Implemented `crates/rust-ai-app/src/gui.rs` containing `RustAiApp` with top menu bar, model provider side panel, theme options, and interactive chat UI stream.
+- Implemented `crates/rust-ai-app/src/config.rs` with `AppConfig` JSON load/save persistence and unit tests.
+- Updated `crates/rust-ai-app/src/main.rs` to initialize and launch native `eframe` window.
+- Updated `ADR-001` accepting `egui`/`eframe`.
+- Updated repository tracking state in `docs/CURRENT_STATE.md`, `docs/NEXT_STEPS.md`, `docs/TASKS.md`, and `docs/tasks/TASK-002-desktop-shell.md`.
 
 ## Architectural Decisions
-- Maintained single application crate `crates/rust-ai-app` while organizing domain modules cleanly inside `src/config.rs`.
+- `ADR-001`: Accepted `egui`/`eframe` for native cross-platform GUI desktop rendering.
 
 ## Executed Commands & Verifications
 ```bash

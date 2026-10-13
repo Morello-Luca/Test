@@ -1,6 +1,6 @@
 # CURRENT_STATE.md — Verified Repository State
 
-**Latest Verified Checkpoint**: Phase 1 Native Desktop Shell Scaffolding & Config Persistence Initialized
+**Latest Verified Checkpoint**: Phase 1 Native Desktop Shell (`egui`/`eframe`) Implemented & Verified
 **Verification Date**: 2026-03-05
 
 ---
@@ -13,11 +13,12 @@
 * [x] **AI Continuity & Root Guidance**: Root `AGENTS.md`, `README.md`, and `CONTRIBUTING.md`.
 * [x] **Documentation System**: Top-level canonical `docs/` hierarchy created using `SCREAMING_SNAKE_CASE.md` formatting.
 * [x] **Configuration Persistence (`AppConfig`)**: `crates/rust-ai-app/src/config.rs` with JSON load/save support and unit tests (`TASK-002`).
-* [x] **Desktop Shell Application Scaffolding**: Main executable updated with config integration (`TASK-002`).
+* [x] **Native GUI Desktop Application Shell (`egui`/`eframe`)**: `crates/rust-ai-app/src/gui.rs` and `src/main.rs` with menu bar, provider settings panel, and interactive chat interface prototype (`TASK-002`).
+* [x] **GUI Framework Selection ADR**: Accepted `ADR-001` selecting `egui` / `eframe`.
 
 ---
 
-## Planned / Unimplemented Subsystems (Out of Scope for Phase 1 Scaffolding)
+## Planned / Unimplemented Subsystems (Out of Scope for Phase 1 Desktop Shell)
 
 * [ ] Full Multi-Provider Chat Engine (Phase 2)
 * [ ] Local Inference & Remote APIs (Phase 3)
