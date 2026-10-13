@@ -2,22 +2,20 @@
 
 ## Active Task Overview
 
-* **Current Active Task**: `TASK-001` (Phase 0 — Engineering Foundation and Governance)
-* **Status**: In Progress / Verification Step
+* **Current Active Task**: `TASK-002` (Phase 1 — Native Desktop Shell Scaffolding & State Management)
+* **Status**: Verification / Finalization Step
 
 ---
 
-## Recommended Immediate Task: `TASK-002` (Phase 1 Setup)
+## Recommended Immediate Task: `TASK-003` (Configuration Persistence & Storage Engine) or `TASK-004` (Chat Architecture)
 
-Once `TASK-001` is finalized and submitted, the immediate next recommended task is:
+Once `TASK-002` is finalized and submitted, the immediate next recommended task is:
 
-* **Task Identifier**: `TASK-002`
-* **Objective**: Initialize Phase 1 Native Desktop GUI Shell & Application State Infrastructure.
-* **Prerequisites**: Phase 0 complete and verified (`TASK-001`).
+* **Task Identifier**: `TASK-003`
+* **Objective**: Create dedicated settings storage and model configuration management.
+* **Prerequisites**: Phase 1 desktop shell scaffolding complete and verified (`TASK-002`).
 * **Scope**:
-  1. Finalize GUI framework selection ADR (`ADR-001`).
-  2. Implement application window lifecycle in `crates/rust-ai-app`.
-  3. Establish application configuration persistence crate/module.
+  1. Expand `AppConfig` into a dedicated persistence module or crate (`crates/rust-ai-core`).
+  2. Implement secure credential handling helpers for model API keys.
 * **Acceptance Criteria**:
-  * Desktop window compiles and launches cleanly across target platforms.
-  * Basic layout and state initialization verified with tests.
+  * Credential masking and configuration load/save verified via unit tests.
