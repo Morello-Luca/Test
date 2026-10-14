@@ -30,18 +30,12 @@ impl LlamaCppBackend {
             load_state: ModelLoadState::Unloaded,
         }
     }
-}
 
-impl ModelProvider for LlamaCppBackend {
-    fn provider_name(&self) -> &str {
-        "llama.cpp Local Backend"
-    }
-
-    fn load_state(&self) -> ModelLoadState {
-        self.load_state.clone()
-    }
-
-    fn load_model(&mut self, model_path: &Path) -> Result<(), String> {
+    pub fn load_model_with_device(
+        &mut self,
+        model_path: &Path,
+        use_gpu: bool,
+    ) -> Result<(), String> {
         if !model_path.exists() {
             let err = format!("Model file not found: {}", model_path.display());
             self.load_state = ModelLoadState::Error(err.clone());
@@ -61,7 +55,18 @@ impl ModelProvider for LlamaCppBackend {
             err
         })?;
 
-        let params = LlamaModelParams::default();
+        if use_gpu && !backend.supports_gpu_offload() {
+            let err = "GPU offloading requested, but compiled llama.cpp backend does not support GPU offload.".to_string();
+            self.load_state = ModelLoadState::Error(err.clone());
+            return Err(err);
+        }
+
+        let mut params = LlamaModelParams::default();
+        if use_gpu {
+            params = params.with_n_gpu_layers(99);
+        } else {
+            params = params.with_n_gpu_layers(0);
+        }
 
         match LlamaModel::load_from_file(&backend, model_path, &params) {
             Ok(loaded_model) => {
@@ -81,6 +86,20 @@ impl ModelProvider for LlamaCppBackend {
                 Err(err)
             }
         }
+    }
+}
+
+impl ModelProvider for LlamaCppBackend {
+    fn provider_name(&self) -> &str {
+        "llama.cpp Local Backend"
+    }
+
+    fn load_state(&self) -> ModelLoadState {
+        self.load_state.clone()
+    }
+
+    fn load_model(&mut self, model_path: &Path) -> Result<(), String> {
+        self.load_model_with_device(model_path, false)
     }
 
     fn unload_model(&mut self) {
@@ -161,8 +180,8 @@ impl ModelProvider for LlamaCppBackend {
                         .map_err(|e| format!("Failed to decode token: {}", e))?;
                 }
 
-                if output_string.trim().is_empty() {
-                    Ok("[Model returned empty response]".to_string())
+                if output_string.is_empty() {
+                    Err("Model generated no tokens.".to_string())
                 } else {
                     Ok(output_string)
                 }
@@ -210,5 +229,62 @@ mod tests {
             ModelLoadState::Error(msg) => assert!(msg.contains("not found")),
             _ => panic!("Expected error state"),
         }
+    }
+
+    #[test]
+    fn test_load_model_with_device_missing_file() {
+        let mut backend = LlamaCppBackend::new();
+        let res = backend.load_model_with_device(Path::new("/nonexistent/model.gguf"), true);
+        assert!(res.is_err());
+        match backend.load_state() {
+            ModelLoadState::Error(msg) => assert!(msg.contains("not found")),
+            _ => panic!("Expected error state"),
+        }
+    }
+
+    #[test]
+    fn test_opt_in_gguf_smoke_test() {
+        // Opt-in live smoke test controlled by RUST_AI_TEST_GGUF environment variable in debug/dev builds
+        if std::env::var("RUST_AI_TEST_GGUF").is_err() {
+            println!("Skipping live GGUF smoke test: RUST_AI_TEST_GGUF env var not set.");
+            return;
+        }
+
+        let model_dir = Path::new("models");
+        let model_path = match std::fs::read_dir(model_dir) {
+            Ok(entries) => entries
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .find(|p| p.extension().and_then(|ext| ext.to_str()) == Some("gguf")),
+            Err(_) => None,
+        };
+
+        let model_path = match model_path {
+            Some(path) => path,
+            None => {
+                println!(
+                    "Skipping live GGUF smoke test: No .gguf model found in models/ directory."
+                );
+                return;
+            }
+        };
+
+        let mut backend = LlamaCppBackend::new();
+        assert!(
+            backend.load_model(&model_path).is_ok(),
+            "Failed to load model at {}",
+            model_path.display()
+        );
+
+        let response = backend.generate_response("Hello! Reply with a short greeting.");
+        assert!(
+            response.is_ok(),
+            "Inference failed on model {}",
+            model_path.display()
+        );
+
+        let text = response.unwrap();
+        println!("Smoke test inference result: {}", text);
+        assert!(!text.is_empty(), "Generated text should not be empty");
     }
 }
