@@ -55,25 +55,28 @@ impl LlamaCppBackend {
             err
         })?;
 
-        if use_gpu && !backend.supports_gpu_offload() {
-            let err = "GPU offloading requested, but compiled llama.cpp backend does not support GPU offload.".to_string();
-            self.load_state = ModelLoadState::Error(err.clone());
-            return Err(err);
-        }
-
-        let mut params = LlamaModelParams::default();
-        if use_gpu {
-            params = params.with_n_gpu_layers(99);
+        let (params, warning) = if use_gpu {
+            if backend.supports_gpu_offload() {
+                (LlamaModelParams::default().with_n_gpu_layers(99), None)
+            } else {
+                let warn = "GPU requested, but compiled llama.cpp backend does not support GPU offload. Falling back to CPU.".to_string();
+                (LlamaModelParams::default().with_n_gpu_layers(0), Some(warn))
+            }
         } else {
-            params = params.with_n_gpu_layers(0);
-        }
+            (LlamaModelParams::default().with_n_gpu_layers(0), None)
+        };
 
         match LlamaModel::load_from_file(&backend, model_path, &params) {
             Ok(loaded_model) => {
                 self.backend = Some(backend);
                 self.model = Some(loaded_model);
                 self.model_name = Some(file_stem.clone());
-                self.load_state = ModelLoadState::Loaded(file_stem);
+                if let Some(warn_msg) = warning {
+                    self.load_state =
+                        ModelLoadState::Loaded(format!("{} ({})", file_stem, warn_msg));
+                } else {
+                    self.load_state = ModelLoadState::Loaded(file_stem);
+                }
                 Ok(())
             }
             Err(e) => {
@@ -158,7 +161,8 @@ impl ModelProvider for LlamaCppBackend {
                 let mut n_cur = tokens.len() as i32;
 
                 for _ in 0..max_tokens {
-                    let token = sampler.sample(&ctx, batch.n_tokens() - 1);
+                    let logit_index = batch.n_tokens() - 1;
+                    let token = sampler.sample(&ctx, logit_index);
                     if vocab.is_eog(token) {
                         break;
                     }
@@ -229,6 +233,15 @@ mod tests {
             ModelLoadState::Error(msg) => assert!(msg.contains("not found")),
             _ => panic!("Expected error state"),
         }
+    }
+
+    #[test]
+    fn test_empty_prompt_generation_error() {
+        let mut backend = LlamaCppBackend::new();
+        backend.load_state = ModelLoadState::Loaded("test_model".to_string());
+        let res = backend.generate_response("   ");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Prompt cannot be empty.");
     }
 
     #[test]

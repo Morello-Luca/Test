@@ -7,9 +7,15 @@ license.workspace = true
 repository.workspace = true
 description = "Model provider adapters and llama.cpp local inference integration for RustAI"
 
+[features]
+default = []
+cuda = ["llama-cpp-2/cuda"]
+vulkan = ["llama-cpp-2/vulkan"]
+metal = ["llama-cpp-2/metal"]
+
 [dependencies]
 rust-ai-core = { path = "../rust-ai-core" }
-llama-cpp-2 = "0.1.84"
+llama-cpp-2 = "0.1.159"
 encoding_rs = "0.8"
 thiserror = "1.0"
 

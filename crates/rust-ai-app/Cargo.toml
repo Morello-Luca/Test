@@ -7,6 +7,12 @@ license.workspace = true
 repository.workspace = true
 description = "Native AI Desktop Application Entry Point"
 
+[features]
+default = []
+cuda = ["rust-ai-providers/cuda"]
+vulkan = ["rust-ai-providers/vulkan"]
+metal = ["rust-ai-providers/metal"]
+
 [dependencies]
 rust-ai-core = { path = "../rust-ai-core" }
 rust-ai-providers = { path = "../rust-ai-providers" }
