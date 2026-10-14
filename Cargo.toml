@@ -3,6 +3,8 @@
 [workspace]
 members = [
     "crates/rust-ai-app",
+    "crates/rust-ai-core",
+    "crates/rust-ai-providers",
 ]
 resolver = "2"
 

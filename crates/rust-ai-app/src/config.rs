@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Application theme options.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -15,6 +15,7 @@ pub enum ThemeMode {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AppConfig {
     pub theme: ThemeMode,
+    pub models_dir: PathBuf,
     pub default_model_provider: String,
     pub default_model_name: String,
     pub window_width: u32,
@@ -25,8 +26,9 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             theme: ThemeMode::System,
-            default_model_provider: "Ollama".to_string(),
-            default_model_name: "llama3".to_string(),
+            models_dir: PathBuf::from("models"),
+            default_model_provider: "llama.cpp".to_string(),
+            default_model_name: String::new(),
             window_width: 1280,
             window_height: 800,
         }
@@ -65,6 +67,7 @@ mod tests {
     fn test_default_config() {
         let config = AppConfig::default();
         assert_eq!(config.theme, ThemeMode::System);
+        assert_eq!(config.models_dir, PathBuf::from("models"));
         assert_eq!(config.window_width, 1280);
         assert_eq!(config.window_height, 800);
     }
@@ -76,7 +79,8 @@ mod tests {
 
         let config = AppConfig {
             theme: ThemeMode::Dark,
-            default_model_name: "mistral".to_string(),
+            models_dir: PathBuf::from("/custom/models"),
+            default_model_name: "llama-3.gguf".to_string(),
             ..AppConfig::default()
         };
 
@@ -85,6 +89,7 @@ mod tests {
         let loaded = AppConfig::load_from_file(&file_path).expect("Load config failed");
         assert_eq!(config, loaded);
         assert_eq!(loaded.theme, ThemeMode::Dark);
-        assert_eq!(loaded.default_model_name, "mistral");
+        assert_eq!(loaded.models_dir, PathBuf::from("/custom/models"));
+        assert_eq!(loaded.default_model_name, "llama-3.gguf");
     }
 }

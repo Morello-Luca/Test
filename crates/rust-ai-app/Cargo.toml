@@ -8,6 +8,8 @@ repository.workspace = true
 description = "Native AI Desktop Application Entry Point"
 
 [dependencies]
+rust-ai-core = { path = "../rust-ai-core" }
+rust-ai-providers = { path = "../rust-ai-providers" }
 eframe = "0.29.1"
 egui = "0.29.1"
 serde = { version = "1.0", features = ["derive"] }

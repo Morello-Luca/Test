@@ -2,20 +2,20 @@
 
 ## Active Task Overview
 
-* **Current Active Task**: `TASK-002` (Phase 1 — Native Desktop Shell Scaffolding & State Management)
-* **Status**: Verification / Finalization Step
+* **Current Active Task**: `TASK-003` (Local Model Discovery, Loading & Chat Interface)
+* **Status**: Complete & Verified
 
 ---
 
-## Recommended Immediate Task: `TASK-003` (Configuration Persistence & Storage Engine) or `TASK-004` (Chat Architecture)
+## Recommended Immediate Task: `TASK-004` (Multi-Provider Architecture & Remote APIs)
 
-Once `TASK-002` is finalized and submitted, the immediate next recommended task is:
+Once `TASK-003` is submitted, the immediate next recommended task is:
 
-* **Task Identifier**: `TASK-003`
-* **Objective**: Create dedicated settings storage and model configuration management.
-* **Prerequisites**: Phase 1 desktop shell scaffolding complete and verified (`TASK-002`).
+* **Task Identifier**: `TASK-004`
+* **Objective**: Expand `ModelProvider` to support remote API services (OpenAI / Anthropic) alongside the local `LlamaCppBackend`.
+* **Prerequisites**: `TASK-003` complete and verified.
 * **Scope**:
-  1. Expand `AppConfig` into a dedicated persistence module or crate (`crates/rust-ai-core`).
-  2. Implement secure credential handling helpers for model API keys.
+  1. Add async HTTP model provider implementations in `crates/rust-ai-providers`.
+  2. Implement secure API key credentials handling.
 * **Acceptance Criteria**:
-  * Credential masking and configuration load/save verified via unit tests.
+  * Seamless provider switching between local llama.cpp GGUF models and remote API endpoints in UI.

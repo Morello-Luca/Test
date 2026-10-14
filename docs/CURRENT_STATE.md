@@ -1,26 +1,23 @@
 # CURRENT_STATE.md — Verified Repository State
 
-**Latest Verified Checkpoint**: Phase 1 Native Desktop Shell (`egui`/`eframe`) Implemented & Verified
+**Latest Verified Checkpoint**: Local Model Discovery, llama.cpp Integration & Chat Interface Implemented (`TASK-003`)
 **Verification Date**: 2026-03-05
 
 ---
 
 ## Implemented & Verified Components
 
-* [x] **Cargo Workspace Scaffolding**: Root `Cargo.toml` with `crates/rust-ai-app` package. Verified build and tests pass cleanly (`cargo test`).
-* [x] **Project Licensing**: Added `LICENSE-MIT` and `LICENSE-APACHE` for dual licensing.
-* [x] **Toolchain & Tooling Config**: `rust-toolchain.toml` set to 1.94.0, `rustfmt.toml`, and `.gitignore`.
+* [x] **Cargo Workspace Architecture**: Multi-crate Cargo workspace (`crates/rust-ai-app`, `crates/rust-ai-core`, `crates/rust-ai-providers`).
+* [x] **Project Licensing**: Dual licensing under `LICENSE-MIT` and `LICENSE-APACHE`.
 * [x] **AI Continuity & Root Guidance**: Root `AGENTS.md`, `README.md`, and `CONTRIBUTING.md`.
-* [x] **Documentation System**: Top-level canonical `docs/` hierarchy created using `SCREAMING_SNAKE_CASE.md` formatting.
-* [x] **Configuration Persistence (`AppConfig`)**: `crates/rust-ai-app/src/config.rs` with JSON load/save support and unit tests (`TASK-002`).
-* [x] **Native GUI Desktop Application Shell (`egui`/`eframe`)**: `crates/rust-ai-app/src/gui.rs` and `src/main.rs` with menu bar, provider settings panel, and interactive chat interface prototype (`TASK-002`).
-* [x] **GUI Framework Selection ADR**: Accepted `ADR-001` selecting `egui` / `eframe`.
+* [x] **Core Domain & Model Discovery (`rust-ai-core`)**: `ModelDiscovery` GGUF scanner, `ModelProvider` trait, `ModelLoadState`, and `ConversationMessage`.
+* [x] **Local Model Backend (`rust-ai-providers`)**: `LlamaCppBackend` wrapping `llama-cpp-2` for GGUF model loading, state lifecycle, and inference generation (`TASK-003`).
+* [x] **Desktop Application & Chat UI (`rust-ai-app`)**: `egui` native desktop window featuring local model selection panel, empty directory guidance, model lifecycle controls, and chat interface (`TASK-003`).
 
 ---
 
-## Planned / Unimplemented Subsystems (Out of Scope for Phase 1 Desktop Shell)
+## Planned / Unimplemented Subsystems (Out of Scope for TASK-003)
 
-* [ ] Full Multi-Provider Chat Engine (Phase 2)
-* [ ] Local Inference & Remote APIs (Phase 3)
+* [ ] Remote Model API Adapters (OpenAI / Anthropic / Groq)
 * [ ] Agent Tool Execution Runtime (Phase 4)
 * [ ] Repository Indexer & Coding Agent (Phase 5)
