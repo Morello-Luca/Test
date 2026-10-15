@@ -6,10 +6,7 @@
 #include <vector>
 
 
-LLMSession::LLMSession(
-    LLMLoader& model,
-    const AgentConfig& agent
-)
+LLMSession::LLMSession( LLMLoader& model, const AgentConfig& agent )
     : model_(model),
       agent_(agent)
 {
@@ -36,22 +33,17 @@ bool LLMSession::initialize()
     }
 
     llama_context_params params = llama_context_default_params();
+    // CONTEXT CONFIGURATION
+        params.n_ctx = agent_.context.context_size;
+        params.n_batch = agent_.context.batch_size;
+        params.n_ubatch = agent_.context.ubatch_size;
+        params.n_seq_max = agent_.context.max_sequences;
+        params.n_threads = agent_.context.threads;
+        params.n_threads_batch = agent_.context.threads_batch;
+        params.offload_kqv = agent_.context.offload_kqv;
+        params.no_perf = !agent_.context.measure_performance;
 
-    params.n_ctx = agent_.context.context_size;
-    params.n_batch = agent_.context.batch_size;
-    params.n_ubatch = agent_.context.ubatch_size;
-    params.n_seq_max = agent_.context.max_sequences;
-
-    params.n_threads = agent_.context.threads;
-    params.n_threads_batch = agent_.context.threads_batch;
-
-    params.offload_kqv = agent_.context.offload_kqv;
-    params.no_perf = !agent_.context.measure_performance;
-
-    context_ = llama_init_from_model(
-        model_.model(),
-        params
-    );
+    context_ = llama_init_from_model( model_.model(), params);
 
     if(context_ == nullptr)
     {
@@ -102,19 +94,14 @@ const AgentConfig& LLMSession::agentConfig() const noexcept
 bool LLMSession::formatHistory( bool addAssistantPrompt, std::string& formatted ) const
 {
     const llama_model* model = model_.model();
-
-    const char* chatTemplate =
-        llama_model_chat_template(model, nullptr);
+    const char* chatTemplate = llama_model_chat_template(model, nullptr);
 
     std::vector<llama_chat_message> messages;
     messages.reserve(history_.size());
 
     for(const auto& message : history_)
     {
-        messages.push_back({
-            message.role.c_str(),
-            message.content.c_str()
-        });
+        messages.push_back({ message.role.c_str(), message.content.c_str() });
     }
 
     // First determine the required buffer size.
@@ -134,10 +121,7 @@ bool LLMSession::formatHistory( bool addAssistantPrompt, std::string& formatted 
     }
 
     // Allocate enough space, including the null terminator.
-    std::vector<char> buffer(
-        static_cast<std::size_t>(required) + 1,
-        '\0'
-    );
+    std::vector<char> buffer( static_cast<std::size_t>(required) + 1, '\0' );
 
     const int32_t written = llama_chat_apply_template(
         chatTemplate,
@@ -154,11 +138,7 @@ bool LLMSession::formatHistory( bool addAssistantPrompt, std::string& formatted 
         return false;
     }
 
-    formatted.assign(
-        buffer.data(),
-        static_cast<std::size_t>(written)
-    );
-
+    formatted.assign( buffer.data(), static_cast<std::size_t>(written) );
     return true;
 }
 
@@ -180,42 +160,25 @@ bool LLMSession::evaluateTokens(
         return false;
     }
 
-    const llama_pos startPosition =
-        llama_memory_seq_pos_max(
-            llama_get_memory(context_),
-            0
-        ) + 1;
+    const llama_pos startPosition = llama_memory_seq_pos_max( llama_get_memory(context_), 0) + 1;
 
-    const int64_t endPosition =
-        static_cast<int64_t>(startPosition) + count;
+    const int64_t endPosition = static_cast<int64_t>(startPosition) + count;
 
     if(endPosition > static_cast<int64_t>(llama_n_ctx(context_)))
     {
-        std::cerr
-            << "Context window is full. "
-            << "Clear the conversation or start a new session.\n";
-
+        std::cerr << "Context window is full. " << "Clear the conversation or start a new session.\n";
         return false;
     }
 
-    const int32_t batchSize = static_cast<int32_t>(
-        std::max<uint32_t>(1, llama_n_batch(context_))
-    );
+    const int32_t batchSize = static_cast<int32_t>( std::max<uint32_t>(1, llama_n_batch(context_)) );
 
     int32_t offset = 0;
 
     while(offset < count)
     {
-        const int32_t currentCount = std::min(
-            batchSize,
-            count - offset
-        );
+        const int32_t currentCount = std::min( batchSize, count - offset );
 
-llama_batch batch = llama_batch_init(
-    currentCount,
-    0,
-    1
-);
+    llama_batch batch = llama_batch_init( currentCount, 0, 1 );
 
 if(batch.token == nullptr ||
    batch.pos == nullptr ||
@@ -263,10 +226,7 @@ offset += currentCount;
 }
 
 
-bool LLMSession::generateText(
-    const std::string& prompt,
-    std::string& response
-)
+bool LLMSession::generateText(const std::string& prompt, std::string& response)
 {
     if(context_ == nullptr || !model_.isLoaded())
     {
