@@ -52,6 +52,14 @@ struct SamplingConfig {
     int64_t seed = -1;                 // Fixed seed: reproducible randomness; -1: choose a random seed.
 };
 
+
+enum class ThinkingPolicy
+{
+    AlwaysOff,   // This agent never thinks
+    AlwaysOn,    // This agent always thinks
+    PerMessage   // Each message can override the default
+};
+
 // ============================================================
 // AGENT CONFIGURATION
         // Defines the behavior of a specific agent. An agent refers to a model by ID, so multiple agents can use the same underlying weights.
@@ -60,6 +68,10 @@ struct AgentConfig
 std::string id;                          // Identifies the agent.
 std::string model_id = "default";        // Selects the model.
 std::string system_prompt;               // Defines the agent's role, behavior, and instructions; more detailed prompts use more context.
+
+ThinkingPolicy thinking = ThinkingPolicy::PerMessage;
+bool default_thinking = false;
+
 ContextConfig context;                   // Controls context capacity, processing speed, and CPU/GPU resource usage.
 SamplingConfig sampling;                 // Controls response randomness, diversity, and repetition.
 uint32_t max_new_tokens = 512;           // Higher: allows longer responses but increases generation time and resource usage.

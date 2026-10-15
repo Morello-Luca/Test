@@ -1,0 +1,2 @@
+*.sh text eol=lf
+scripts/omni text eol=lf

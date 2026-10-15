@@ -13,12 +13,12 @@
 inline std::vector<ModelConfig> models = {
     {
         .id = "general",
-        .model_path = "/workspace/models/qwen2.5-0.5b-instruct-q8_0.gguf",
+        .model_path = "/workspace/models/Qwen3-0.6B-Q8_0.gguf",
         .gpu_layers = -1
     },
     {
         .id = "coder",
-        .model_path = "/workspace/models/qwen2.5-0.5b-instruct-q8_0.gguf",
+        .model_path = "/workspace/models/Qwen3-0.6B-Q8_0.gguf",
         .gpu_layers = -1
     }
 };
@@ -38,6 +38,9 @@ inline AgentConfig makeResearchAgent()
     config.system_prompt =
         "You are a research assistant. "
         "Analyze technical questions carefully.";
+    
+    config.thinking = ThinkingPolicy::PerMessage;
+    config.default_thinking = false;
 
     config.context.context_size = 8192;
     config.sampling.temperature = 0.3f;
@@ -57,6 +60,8 @@ inline AgentConfig makeCodingAgent()
     config.system_prompt =
         "You are a C++ coding assistant. "
         "Write correct, maintainable code.";
+
+    config.thinking = ThinkingPolicy::AlwaysOn;
 
     config.context.context_size = 8192;
     config.sampling.temperature = 0.2f;

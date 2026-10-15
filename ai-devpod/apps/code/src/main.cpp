@@ -5,11 +5,11 @@
 
 int main()
 {
-    constexpr bool debugMode = false;
+    constexpr bool debugMode = true;
     LLMLoader::setDebugMode(debugMode);
 
     // Select the agent.
-    AgentConfig agent = makeCodingAgent();
+    AgentConfig agent = makeResearchAgent();
 
     // Load its model.
     auto loader = LLMLoader::loadForAgent(agent, models);

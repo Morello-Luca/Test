@@ -6,6 +6,13 @@
 
 #include <string>
 #include <vector>
+#include <optional>
+
+struct MessageOptions
+{
+    // nullopt = use the agent's configured default
+    std::optional<bool> thinking;
+};
 
 class LLMSession
 {
@@ -33,10 +40,11 @@ public:
 
     // Send a message and generate a response.
     // Conversation history is preserved between calls.
-    bool chat(
-        const std::string& userMessage,
-        std::string& response
-    );
+bool chat(
+    const std::string& userMessage,
+    std::string& response,
+    const MessageOptions& options = {}
+);
 
     // Start a new conversation without reloading the model.
     void clearHistory();

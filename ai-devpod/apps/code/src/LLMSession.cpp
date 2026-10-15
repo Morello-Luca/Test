@@ -5,6 +5,39 @@
 #include <memory>
 #include <vector>
 
+namespace
+{
+    bool resolveThinking(
+        const AgentConfig& agent,
+        const MessageOptions& message)
+    {
+        switch (agent.thinking)
+        {
+            case ThinkingPolicy::AlwaysOff:
+                return false;
+
+            case ThinkingPolicy::AlwaysOn:
+                return true;
+
+            case ThinkingPolicy::PerMessage:
+                return message.thinking.value_or(
+                    agent.default_thinking
+                );
+        }
+
+        return false;
+    }
+
+    std::string applyThinkingMode(
+        const std::string& message,
+        bool enabled)
+    {
+        return std::string(
+            enabled ? "/think\n" : "/no_think\n"
+        ) + message;
+    }
+}
+
 
 LLMSession::LLMSession( LLMLoader& model, const AgentConfig& agent )
     : model_(model),
@@ -513,7 +546,8 @@ bool LLMSession::generateText(const std::string& prompt, std::string& response)
 
 bool LLMSession::chat(
     const std::string& userMessage,
-    std::string& response
+    std::string& response,
+    const MessageOptions& options
 )
 {
     if(!isInitialized())
@@ -526,10 +560,16 @@ bool LLMSession::chat(
     // of a conversation.
     if(history_.empty() && !agent_.system_prompt.empty())
     {
-        history_.push_back({
-            "system",
-            agent_.system_prompt
-        });
+const bool enableThinking =
+    resolveThinking(agent_, options);
+
+const std::string messageContent =
+    applyThinkingMode(userMessage, enableThinking);
+
+history_.push_back({
+    "user",
+    messageContent
+});
     }
 
     history_.push_back({

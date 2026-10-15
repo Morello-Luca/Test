@@ -1,0 +1,232 @@
+# Agent Workflow Engine (C++17)
+
+A modular C++ agent framework reproducing the observable workflow patterns of
+modern AI coding agents: interactive planning, task decomposition, tool
+calling, execution, verification, error recovery, progress tracking, and
+resumability.
+
+This implementation follows the specification's principles:
+
+- **Modular, balanced classes** — related operations are grouped (e.g.,
+  `LocalFileTool` handles read/write/list/exists/stat in one cohesive
+  class). Planning, execution, verification, and recovery are separate
+  subsystems because their responsibilities differ significantly.
+- **Replaceable infrastructure** — the agent runtime depends only on the
+  narrow `IModelAdapter` boundary and the `IPlanRepository` abstraction.
+  The pre-existing `existing::ModelLoader` is preserved as-is; an
+  `ExistingModelAdapter` wraps it so the runtime never sees provider types.
+- **C++17, RAII, smart pointers, interfaces at genuine substitution
+  boundaries**.
+- **Mocked model responses, simulated tools, in-memory persistence** —
+  real integrations are deferred per spec §11, §13.
+
+## Honest status report
+
+After the validation/correction pass, the engine now correctly:
+
+1. **Tracks acceptance-criteria status**. `AcceptanceCriterion` carries an
+   explicit `CriterionStatus` (`Defined | Pending | Passed | Failed |
+   Blocked | Skipped`). Criteria remain `Defined` until the verifier runs;
+   the verifier is the ONLY component that transitions them out of
+   `Defined`. Markdown rendering uses distinct checkbox marks
+   (`[ ]`, `[.]`, `[x]`, `[!]`, `[B]`, `[-]`) so the rendered
+   `task_plan.md` cannot be misread as "everything is checked off" before
+   verification has occurred.
+2. **Refuses unproductive agent stops**. `AgentLoop` injects an explicit
+   system message telling the model that "stopping without making a tool
+   call is not acceptable" and, when a retry occurs after verification
+   failure, an additional message with the failure reason. The loop also
+   detects identical unproductive stops and short-circuits them with a
+   clear failure reason rather than rubber-stamping.
+3. **Enforces strict completion semantics**. `ProgressTracker::is_complete`
+   requires EVERY task to be `Passed` AND every required criterion to be
+   `Passed`. A `Blocked` or `Failed` task prevents completion; the
+   workflow ends in `Blocked`, `Failed`, `Cancelled`, or `Completed`
+   (distinct terminal states). The demo run with no scripted model
+   responses correctly ends in `Blocked`, NOT `Completed`.
+4. **Clarifies retry accounting**. `PlanTask::max_retries` counts retries
+   AFTER the initial attempt; total allowed attempts = `max_retries + 1`.
+   `attempts` counts every execution. Helpers `retries_used()`,
+   `retries_remaining()`, `can_retry()` make the rule explicit at call
+   sites. Markdown renders attempts as `N (R+1/M)` (N total, R retries
+   used, M max retries) so the bookkeeping is unambiguous.
+5. **Distinguishes recovery outcomes**. `AgentEngine::step()` transitions:
+   - `RetryTask` → `Executing` (continue)
+   - `BlockTask` → `Blocked` (workflow blocked, not failed)
+   - `FailTask` / `FailWorkflow` → `Failed`
+   - `RevisePlan` → `AwaitingApproval` (plan.approved invalidated)
+   Each recovery decision is logged with its cause and outcome.
+6. **Markdown reflects actual post-execution state**. The demo renders
+   `task_plan.md`, `findings.md`, and `progress.md` BOTH before and after
+   the run, so the user can see how the structured state evolved.
+
+### Known limitations
+
+- The default `ResultVerifier` is permissive: it treats any successful tool
+  call as evidence that ALL of a task's acceptance criteria are satisfied.
+  A production verifier would inspect tool outputs against each criterion's
+  specific claim. Tests can override this via
+  `ResultVerifier::set_verify_fn`.
+- The mock `existing::ModelLoader` returns a benign default stop response
+  when its scripted queue is empty. The demo therefore ends in `Blocked`
+  (the model has no real tool to call, so it can't produce evidence).
+  This is the correct behavior given the spec; a real model adapter would
+  produce actual tool calls.
+- `LocalFileTool` operates against an in-memory virtual filesystem, not
+  the real filesystem. Spec §11 explicitly defers real fs / shell access
+  to a later phase.
+- `InMemoryPlanRepository` does not persist across process restarts; spec
+  §10 defers real local-storage / DB integration.
+
+## Layout
+
+```
+agent-engine/
+├── Makefile                       # g++ directly; .RECIPEPREFIX := > to avoid tab/space issues
+├── README.md                      # This file
+├── existing/                      # Simulated pre-existing model code
+│   ├── ModelConfig.h
+│   └── ModelLoader.{h,cpp}
+└── core/
+    ├── AgentEngine.{h,cpp}         # Top-level orchestrator
+    ├── WorkflowController.{h,cpp}  # Centralized state machine (spec §8)
+    ├── WorkflowState.{h,cpp}
+    ├── models/
+    │   ├── DomainModels.{h,cpp}        # UserRequest, PlanTask, TaskPlan, AcceptanceCriterion + CriterionStatus
+    │   └── ToolExecutionTypes.{h,cpp}  # ToolCall, ToolResult, WorkflowEvent
+    ├── planning/                       # Spec §4
+    │   ├── RequestAnalyzer.{h,cpp}
+    │   ├── ContextAnalyzer.{h,cpp}
+    │   ├── TaskDecomposer.{h,cpp}
+    │   ├── PlanValidator.{h,cpp}       # DAG / cycle / uniqueness checks
+    │   └── PlanCoordinator.{h,cpp}     # Composes the above
+    ├── execution/                      # Spec §5, §6, §7
+    │   ├── AgentLoop.{h,cpp}           # Iterative loop; injects failure context
+    │   ├── TaskScheduler.{h,cpp}
+    │   ├── ToolDispatcher.{h,cpp}      # Authorizes + dispatches tool calls
+    │   ├── ResultVerifier.{h,cpp}      # Spec §7; sets criterion statuses
+    │   └── RecoveryManager.{h,cpp}     # Bounded retries; sets prior_failure_reason
+    ├── tools/
+    │   ├── ITool.h
+    │   ├── IModelAdapter.{h,cpp}       # Narrow LLM boundary + factories
+    │   ├── ToolRegistry.{h,cpp}
+    │   ├── LocalFileTool.{h,cpp}       # Grouped fs ops + path-traversal guard
+    │   └── MockTool.{h,cpp}            # Deterministic test tool
+    ├── artifacts/                      # Spec §9
+    │   ├── EventLog.{h,cpp}            # Thread-safe append-only log
+    │   ├── MarkdownRenderer.{h,cpp}   # task_plan.md / findings.md / progress.md
+    │   └── ProgressTracker.{h,cpp}    # is_complete / is_failed / is_blocked
+    ├── storage/                        # Spec §10
+    │   ├── IPlanRepository.h
+    │   └── InMemoryPlanRepository.{h,cpp}
+    ├── app/main.cpp                    # Demo driver (renders md before + after run)
+    └── tests/                          # Spec §12 scenarios + §8 regression tests
+        ├── test_phase1.cpp ... test_phase8.cpp
+```
+
+## Build & run
+
+```bash
+# Clean rebuild + everything (engine lib + demo + all 8 test binaries)
+make -C agent-engine -B clean all tests
+
+# Run all tests in sequence
+make -C agent-engine run-tests
+
+# Or one phase at a time
+make -C agent-engine build/test_phase8
+./agent-engine/build/test_phase8
+
+# Run the demo (submits a request, approves, runs, prints md before+after)
+make -C agent-engine demo
+./agent-engine/build/agent_demo
+```
+
+Toolchain: `g++ 14.2` (or any C++17 compiler). No CMake required.
+
+## Test summary
+
+| Phase | Theme | Tests | Status |
+|---|---|---|---|
+| 1 | existing model + adapter boundary | 4 | ✅ |
+| 2 | domain + workflow foundation | 6 | ✅ |
+| 3 | interactive planning + markdown | 9 | ✅ |
+| 4 | execution subsystem | 11 | ✅ |
+| 5 | verification + recovery | 8 | ✅ |
+| 6 | progress + resumability + completion semantics | 13 | ✅ |
+| 7 | end-to-end integration (spec §12 scenarios) | 12 | ✅ |
+| 8 | **regression tests for the validation/correction pass** | 9 | ✅ |
+
+**Total: 72 tests, all passing.**
+
+### Phase 8 regression coverage (the user's 9 required scenarios)
+
+1. Acceptance criteria remain `Defined` (no `[x]`) before verification.
+2. A model stops without making a tool call → verification failure preserved.
+3. Verification fails because evidence is missing → criterion becomes `Blocked`.
+4. Recovery sets `prior_failure_reason` on `RetryTask` (changes next action).
+5. Retries exhaust → task becomes `Blocked` (3 attempts = 1 initial + 2 retries).
+6. A blocked task prevents successful workflow completion (NOT Completed).
+7. A plan revision invalidates approval (`plan.approved = false`).
+8. A successful tool call + successful verification → task complete + criteria `Passed`.
+9. Markdown reflects the actual `Blocked` state (no false `[x]` marks).
+
+## Definition of Done (spec §14)
+
+| Criterion | Status |
+|---|---|
+| Builds using existing supported C++ standard | ✅ C++17, `-Wall -Wextra -Wpedantic` |
+| Classes have cohesive responsibilities + .h/.cpp separation | ✅ |
+| Existing model-loading functionality remains intact | ✅ `existing/` preserved; wrapped by `ExistingModelAdapter` |
+| User can submit, inspect, edit, approve, revise a plan | ✅ |
+| Agent can execute a multi-step workflow using simulated tools | ✅ |
+| Tool results feed back into the agent loop | ✅ |
+| Failures trigger bounded recovery rather than uncontrolled repetition | ✅ `max_retries` + iteration/tool-call limits + identical-stop detection |
+| Task completion is based on verification, not assertions alone | ✅ `has_unverified_claim` flag + criterion `Blocked` when no evidence |
+| Markdown artifacts reflect the current structured state | ✅ rendered before AND after run; criterion marks distinguish states |
+| Interrupted workflows can be reconstructed from in-memory repo | ✅ `checkpoint` + `resume` |
+| Core behavior can be tested without a live model | ✅ 72 tests use mocks / scripted loader |
+| Architecture supports future model + persistence adapters | ✅ swap `IModelAdapter` + `IPlanRepository` |
+
+## Architectural notes
+
+- **No "god class".** `AgentEngine` wires collaborators; each subsystem
+  owns its own logic.
+- **No scatter.** Small data-only types are grouped in `DomainModels.h`
+  and `ToolExecutionTypes.h` per spec §2.1.
+- **No provider lock-in.** All references to provider types are confined
+  to `existing/` and `IModelAdapter.cpp`. `core/` never includes
+  `existing/ModelLoader.h`.
+- **Spec §1 enforced.** `AcceptanceCriterion::status` defaults to
+  `Defined`. Only `apply_verification_to_task()` (called from
+  `AgentEngine::step()` after the verifier runs) transitions criteria to
+  `Passed` / `Failed` / `Blocked`.
+- **Spec §2 enforced.** `AgentLoop::build_context` includes
+  `task.prior_failure_reason` as an explicit system message; the loop
+  detects identical unproductive stops and short-circuits them.
+- **Spec §3 enforced.** `ProgressTracker::is_complete` requires every
+  task `Passed` + every required criterion `Passed`; `is_blocked` /
+  `is_failed` / `is_cancelled` are distinct. `AgentEngine::step()`
+  transitions to the matching terminal state.
+- **Spec §4 enforced.** `PlanTask::max_retries` counts retries AFTER the
+  initial attempt; helpers `retries_used()`, `retries_remaining()`,
+  `can_retry()` make the rule explicit. Recovery decisions are logged
+  with cause + outcome.
+- **Spec §6 enforced.** `LocalFileTool` validates arguments before
+  execution (in both `validate_arguments` and `execute`, defensively).
+  Path traversal is rejected. Content that looks like prompt injection
+  ("ignore previous", "SYSTEM:") is flagged as `untrusted_content_flagged`.
+- **Spec §7 enforced.** `AgentLoop` always leaves a task in
+  `AwaitingVerification` when the model asserts success. `ResultVerifier`
+  independently decides pass/fail based on evidence. A model's "I'm done"
+  is never accepted as proof.
+- **Spec §10 enforced.** `WorkflowSnapshot` records the original request,
+  plan + revision, task statuses, dependencies, retry counts, executed
+  tool calls, full event log, last action summary. `resume()` replays
+  events without re-running tasks; non-idempotent actions whose previous
+  outcome is unknown are preserved for examination rather than blindly
+  re-run.
+- **Spec §4.3 enforced.** `PlanCoordinator` bumps plan version on every
+  edit; `RecoveryManager::apply` with `RevisePlan` clears
+  `plan.approved = false` so `WorkflowController` can bounce back to
+  `AwaitingApproval` for renewed user approval.

@@ -105,8 +105,12 @@ case "$1" in
         ;;
 
     --source)
-        chmod +x "$SOURCE_SCRIPT"
-        sudo install -m 755 "$SOURCE_SCRIPT" /usr/local/bin/omni
+        TMP_SCRIPT="$(mktemp)"
+        trap 'rm -f "$TMP_SCRIPT"' EXIT
+
+        sed 's/\r$//' "$SOURCE_SCRIPT" > "$TMP_SCRIPT"
+        sudo install -m 755 "$TMP_SCRIPT" /usr/local/bin/omni
+
         echo "Omni launcher installed successfully."
         ;;
 

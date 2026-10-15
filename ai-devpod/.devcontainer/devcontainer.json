@@ -1,6 +1,6 @@
 {
   "name": "ai-coder",
-  "postCreateCommand": "/workspace/scripts/build-llama-cpp.sh",
+  "postCreateCommand": "sed -i 's/\\r$//' /workspace/scripts/build-llama-cpp.sh /workspace/scripts/omni && bash /workspace/scripts/build-llama-cpp.sh && sudo install -m 755 /workspace/scripts/omni /usr/local/bin/omni",
   "build": {
     "dockerfile": "Dockerfile"
   },
