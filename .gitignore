@@ -7,6 +7,4 @@
 .vscode/
 __pycache__/
 /ai-devpod/models/
-/Test/ai-devpod/models/
-ai-devpod/build/
 ai-devpod/build/
