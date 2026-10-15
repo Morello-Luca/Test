@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="/workspace"
+BUILD_DIR="$PROJECT_DIR/build/omni"
+SOURCE_SCRIPT="$PROJECT_DIR/scripts/omni"
+
+usage() {
+    cat <<'HELP'
+Omni — Local AI Development Environment
+
+Usage:
+  omni --help              Show available commands
+  omni --source            Install/update the launcher
+  omni --make              Configure and build all apps
+  omni --list              List available executables
+  omni --clean              Clean Omni's build directory
+  omni --status             Show tools, GPU and project status
+  omni <executable> [args] Run an app
+
+Examples:
+  omni --source
+  omni --make
+  omni --list
+  omni hello
+  omni code/hello
+HELP
+}
+
+find_executables() {
+    [[ -d "$BUILD_DIR" ]] || return 0
+
+    find "$BUILD_DIR" -type f -executable \
+        ! -path '*/CMakeFiles/*' \
+        ! -path "$BUILD_DIR/omni" \
+        -print | sort
+}
+
+list_executables() {
+    local -a programs=()
+    mapfile -t programs < <(find_executables)
+
+    if ((${#programs[@]} == 0)); then
+        echo "No executables found. Build the project with: omni --make"
+        return
+    fi
+
+    echo "Available executables:"
+    local path relative
+    for path in "${programs[@]}"; do
+        relative="${path#"$BUILD_DIR"/}"
+        printf "  %-20s %s\n" "${relative##*/}" "$relative"
+    done
+}
+
+show_status() {
+    echo "Omni status"
+    echo "-----------"
+    echo "Project: $PROJECT_DIR/apps"
+
+    if [[ -f "$PROJECT_DIR/apps/CMakeLists.txt" ]]; then
+        echo "CMake configuration: found"
+    else
+        echo "CMake configuration: MISSING"
+    fi
+
+    echo
+    echo "Development tools:"
+    local tool
+    for tool in cmake ninja g++; do
+        if command -v "$tool" >/dev/null 2>&1; then
+            printf "  %-8s " "$tool"
+            "$tool" --version 2>/dev/null | head -n 1 || true
+        else
+            echo "  $tool: not found"
+        fi
+    done
+
+    echo
+    echo "GPU:"
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        nvidia-smi --query-gpu=name,memory.total \
+            --format=csv,noheader 2>/dev/null || echo "GPU unavailable"
+    else
+        echo "nvidia-smi not found"
+    fi
+
+    echo
+    if [[ -d "$BUILD_DIR" ]]; then
+        echo "Build directory: found"
+        list_executables
+    else
+        echo "Build directory: not created yet"
+    fi
+}
+
+if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+fi
+
+case "$1" in
+    --help|-h)
+        usage
+        ;;
+
+    --source)
+        chmod +x "$SOURCE_SCRIPT"
+        sudo install -m 755 "$SOURCE_SCRIPT" /usr/local/bin/omni
+        echo "Omni launcher installed successfully."
+        ;;
+
+    --make)
+        cmake -S "$PROJECT_DIR/apps" -B "$BUILD_DIR" -G Ninja
+        cmake --build "$BUILD_DIR"
+        ;;
+
+    --list)
+        list_executables
+        ;;
+
+    --clean)
+        if [[ ! -d "$BUILD_DIR" ]]; then
+            echo "Omni build directory does not exist; nothing to clean."
+            exit 0
+        fi
+
+        echo "This will remove: $BUILD_DIR"
+        read -r -p "Continue? [y/N] " answer
+        case "$answer" in
+            y|Y|yes|YES)
+                rm -rf -- "$BUILD_DIR"
+                echo "Omni build directory cleaned."
+                ;;
+            *)
+                echo "Cancelled."
+                ;;
+        esac
+        ;;
+
+    --status)
+        show_status
+        ;;
+
+    *)
+        REQUESTED="$1"
+        shift
+
+        if [[ "$REQUESTED" == */* ]]; then
+            PROGRAM="$BUILD_DIR/$REQUESTED"
+
+            if [[ ! -x "$PROGRAM" || ! -f "$PROGRAM" ]]; then
+                echo "Error: executable not found: $REQUESTED" >&2
+                echo "Use 'omni --list' to see available executables." >&2
+                exit 127
+            fi
+        else
+            matches=()
+            while IFS= read -r path; do
+                if [[ "${path##*/}" == "$REQUESTED" ]]; then
+                    matches+=("$path")
+                fi
+            done < <(find_executables)
+
+            if ((${#matches[@]} == 0)); then
+                echo "Error: executable not found: $REQUESTED" >&2
+                echo "Use 'omni --list' to see available executables." >&2
+                exit 127
+            elif ((${#matches[@]} > 1)); then
+                echo "Error: '$REQUESTED' matches multiple executables:" >&2
+                for path in "${matches[@]}"; do
+                    echo "  ${path#"$BUILD_DIR"/}" >&2
+                done
+                echo "Run one using its relative path, e.g. omni code/hello." >&2
+                exit 2
+            fi
+
+            PROGRAM="${matches[0]}"
+        fi
+
+        exec "$PROGRAM" "$@"
+        ;;
+esac
